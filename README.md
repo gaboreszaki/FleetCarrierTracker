@@ -4,9 +4,6 @@
 A plugin for [EDMC](https://github.com/EDCD/EDMarketConnector) (Elite: Dangerous Market Connector) to notify a discord text-channel about upcoming Carrier jumps.
 The plugin watches your journey file and send a discord text message via webhook in the moment when the carrier's owner (you) setup or cancel a jump.
 
-![Jump request message example](./assets/jump_request_message_example.png)
-![Jump Cancel message example](./assets/jump_cancel_message_example.png)
-
 ### Who is for:
 
 - This plugin is for Fleet Carrier Owners Only.
@@ -20,23 +17,25 @@ The plugin watches your journey file and send a discord text message via webhook
 
 [Discord](https://discord.com/) - with access to a server where you can set up a webhook, or get a link to a webhook from the server admins.
 
+[Inara](https://inara.cz/elite/news/) account *this will be optional later
+
 
 ### Features: 
 
 - [ ] Discord notifications:
   - [x] Jump Request notification
   - [x] Jump Cancelled notification
-  - [x] [Inara](https://inara.cz/elite/news/) Link for your carrier
-  - [ ] [Inara](https://inara.cz/elite/news/) link for the system
+  - [x]  Link for your carrier
+  - [ ] Inara link for the system
   - [ ] Calculated lockdown time
 - [ ] FCT Settings
   - [x] Discord webhook link
-  - [x] [Inara](https://inara.cz/elite/news/) link
+  - [x] Inara link
     - [ ] optional link
   - [ ] Optional Dashboard display
 - [ ] EDMC dashboard
-  - [ ] Current system with [Inara](https://inara.cz/elite/news/) link
-  - [ ] Carrier Name + link to [Inara](https://inara.cz/elite/news/)
+  - [ ] Current system with Inara link
+  - [ ] Carrier Name + link to Inara
   - [ ] Track time/countdown
     - [ ] Time until Lockdown time
     - [ ] Time until jump
@@ -51,8 +50,13 @@ The plugin watches your journey file and send a discord text message via webhook
 3. Restart EDMC
 4. Open Settings 
 5. FleetCarrierTracker Tab
-6. Copy/Paste your Discord webhook and [Inara](https://inara.cz/elite/news/) links
+6. Copy/Paste your Discord webhook and Inara links
 7. Press ok 
+
+
+### Examples of the sent messages
+![Jump request message example](./assets/jump_request_message_example.png)
+![Jump Cancel message example](./assets/jump_cancel_message_example.png)
 
 
 #### More detail about:
