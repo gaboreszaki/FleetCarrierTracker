@@ -12,9 +12,9 @@ from tkinter import Frame
 from typing import Optional
 from datetime import datetime
 import json
-
 import requests
 
+from ttkHyperlinkLabel import HyperlinkLabel
 import myNotebook as nb  # noqa: N813
 from config import appname, config
 
@@ -37,6 +37,7 @@ class FleetCarrierTracker:
         self.click_count = tk.StringVar(value=str(config.get_int('click_counter_count')))
         self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
         self.fct_carriers_inara_url = tk.StringVar(value=str(config.get_str('fct_carriers_inara_url')))
+
         logger.info("Fleet carrier Tracker instantiated")
 
     def on_load(self) -> str:
@@ -68,20 +69,32 @@ class FleetCarrierTracker:
         :param is_beta: Whether or not EDMC is currently marked as in beta mode
         :return: The frame to add to the settings window
         """
-        current_row = 0
+
+        PADX = 10  # noqa: N806
+        BUTTONX = 12  # noqa: N806
+        PADY = 1  # noqa: N806
+        BOXY = 2  # noqa: N806
+        SEPY = 10  # noqa: N806
+
         frame = nb.Frame(parent)
+        frame.columnconfigure(1, weight=1)
+        current_row = 0
 
-        # setup our config in a "Click Count: number"
-        nb.Label(frame, text='Click Count').grid(row=current_row)
-        nb.EntryMenu(frame, textvariable=self.click_count).grid(row=current_row, column=1)
-        current_row += 1  # Always increment our row counter, makes for far easier tkinter design.
-
-        nb.Label(frame, text='Discord Webhook URL:').grid(row=current_row)
-        nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url).grid(row=current_row, column=1)
+        HyperlinkLabel(
+            frame,
+            text='Fleet Carrier Tracker ',
+            background=nb.Label().cget('background'),
+            url='https://github.com/gaboreszaki/FleetCarrierTracker',
+            underline=True
+        ).grid(row=current_row, columnspan=2, padx=PADX, pady=PADY, sticky=tk.W)
         current_row += 1
 
-        nb.Label(frame, text='Inara Link for your carrier').grid(row=current_row)
-        nb.EntryMenu(frame, textvariable=self.fct_carriers_inara_url).grid(row=current_row, column=1)
+        nb.Label(frame, text='Discord Webhook URL:').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
+        nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url, show="*", width=30).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        current_row += 1  # Always increment our row counter, makes for far easier tkinter design.
+
+        nb.Label(frame, text='Inara Link for your carrier').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
+        nb.EntryMenu(frame, textvariable=self.fct_carriers_inara_url).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
         current_row += 1
 
         return frame
@@ -97,7 +110,7 @@ class FleetCarrierTracker:
         """
         # You need to cast to `int` here to store *as* an `int`, so that
         # `config.get_int()` will work for re-loading the value.
-        config.set('click_counter_count', int(self.click_count.get()))
+
         config.set('fct_discord_webhook_url', str(self.fct_discord_webhook_url.get()))
         config.set('fct_carriers_inara_url', str(self.fct_carriers_inara_url.get()))
 
@@ -112,15 +125,15 @@ class FleetCarrierTracker:
         """
         current_row = 0
         frame = tk.Frame(parent)
-        button = tk.Button(
-            frame,
-            text="Count me",
-            command=lambda: self.click_count.set(str(int(self.click_count.get()) + 1))
-        )
-        button.grid(row=current_row)
-        current_row += 1
-        tk.Label(frame, text="Count:").grid(row=current_row, sticky=tk.W)
-        tk.Label(frame, textvariable=self.click_count).grid(row=current_row, column=1)
+
+        if self.fct_discord_webhook_url.get() != None and self.fct_carriers_inara_url.get() != None:
+            fct_status = "enabled"
+        else:
+            fct_status = "need setup"
+
+        tk.Label(frame, text="Fleet Carrier Tracker").grid(row=current_row, sticky=tk.W, pady=10)
+        tk.Label(frame, text=fct_status).grid(row=current_row, column=1, sticky=tk.W, padx=5)
+
         return frame
 
 
@@ -245,8 +258,7 @@ def send_data_to_discord(content):
     logger.info('---------------------- SENDING message to DISCORD ----------------------')
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
-
-    r = requests.post(fct.fct_discord_webhook_url.get(), data=json.dumps(content), headers=headers, timeout=(1,1))
+    r = requests.post(fct.fct_discord_webhook_url.get(), data=json.dumps(content), headers=headers, timeout=(1, 1))
 
     if r.status_code == 204:
         logger.info('Discord message sent successfully')
@@ -259,16 +271,7 @@ def send_data_to_discord(content):
 
 
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
-    # example:
-    # { "timestamp":"2025-01-27T19:04:43Z", "event":"CarrierJumpRequest", "CarrierID":3707009792, "SystemName":"Synuefe NL-N c23-4", "Body":"Synuefe NL-N c23-4 B 2", "SystemAddress":1184840454858, "BodyID":17, "DepartureTime":"2025-01-27T19:20:10Z" }
     if entry['event'] == 'CarrierJumpRequest':
-
-        # logger.info(entry)
-        # logger entry examples:
-        # no planetary body was set for the jump:
-        # {'timestamp': '2025-01-28T12:31:17Z', 'event': 'CarrierJumpRequest', 'CarrierID': 3707009792, 'SystemName': 'Synuefe AX-A b47-2', 'SystemAddress': 5080543274385, 'BodyID': 1, 'DepartureTime': '2025-01-28T12:47:10Z'}
-        # to specific body in a system
-        # {'timestamp': '2025-01-28T12:34:53Z', 'event': 'CarrierJumpRequest', 'CarrierID': 3707009792, 'SystemName': 'Synuefe NL-N c23-4', 'Body': 'Synuefe NL-N c23-4 B 7', 'SystemAddress': 1184840454858, 'BodyID': 23, 'DepartureTime': '2025-01-28T12:50:10Z'}
 
         # process body if it exists
         if 'Body' in entry:
@@ -281,9 +284,7 @@ def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry
 
         logger.info(f'fct jump Requested to: {destination_system_name} at: {departure_time}')
 
-
         send_data_to_discord(pack_data_carrier_jump_request(destination_system_name, destination_body, departure_time, fct.fct_carriers_inara_url.get()))
 
     if entry['event'] == 'CarrierJumpCancelled':
-
         send_data_to_discord(data_for_canceled_jump_request())
