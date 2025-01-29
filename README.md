@@ -5,7 +5,6 @@ A plugin for [EDMC](https://github.com/EDCD/EDMarketConnector) (Elite: Dangerous
 The plugin watches your journey file and send a discord text message via webhook in the moment when the carrier's owner (you) setup or cancel a jump.
 
 ![Jump request message example](./assets/jump_request_message_example.png)
-
 ![Jump Cancel message example](./assets/jump_cancel_message_example.png)
 
 ### Who is for:
@@ -15,18 +14,12 @@ The plugin watches your journey file and send a discord text message via webhook
 
 ### Requirements: 
 
-[Elite: Dangerous](https://www.elitedangerous.com/)
+[Elite: Dangerous](https://www.elitedangerous.com/) + **A Fleet Carrier**
+
 [Elite: Dangerous Market Connector (EDMC)](https://github.com/EDCD/EDMarketConnector)
+
 [Discord](https://discord.com/) - with access to a server where you can set up a webhook, or get a link to a webhook from the server admins.
-**A Fleet Carrier**
 
-
-
-> What is a webhook:
-> https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
->
-> what is a fleet carrier:
-> https://www.elitedangerous.com/equipment/carriers
 
 ### Features: 
 
@@ -53,7 +46,6 @@ The plugin watches your journey file and send a discord text message via webhook
 
 ### How to install it?
 
-
 1. Download the latest version from here: --- LINK will be available at v1.0 --- 
 2. Extract the folder to the EDMC's plugin folder
 3. Restart EDMC
@@ -62,7 +54,17 @@ The plugin watches your journey file and send a discord text message via webhook
 6. Copy/Paste your Discord webhook and [Inara](https://inara.cz/elite/news/) links
 7. Press ok 
 
-> For more detail about plugins installation to EDMC please read this: [EDMC plugins installation](https://github.com/EDCD/EDMarketConnector/wiki/Plugins) 
+
+#### More detail about:
+
+> Plugin installation to EDMC please read this:
+>
+> https://github.com/EDCD/EDMarketConnector/wiki/Plugins
+
+> What is and how to create a Discord webhook:
+> 
+> https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+
 
 
 
