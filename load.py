@@ -10,12 +10,12 @@ import tkinter as tk
 import os
 from tkinter import Frame
 from typing import Optional
-from datetime import datetime
-import json
-import requests
+
+import myNotebook as nb  # noqa: N813
+
+from discord_messages import DiscordMessages
 
 from ttkHyperlinkLabel import HyperlinkLabel
-import myNotebook as nb  # noqa: N813
 from config import appname, config
 
 # This **MUST** match the name of the folder the plugin is in.
@@ -37,6 +37,8 @@ class FleetCarrierTracker:
         self.click_count = tk.StringVar(value=str(config.get_int('click_counter_count')))
         self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
         self.fct_carriers_inara_url = tk.StringVar(value=str(config.get_str('fct_carriers_inara_url')))
+
+        self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carriers_inara_url.get())
 
         logger.info("Fleet carrier Tracker instantiated")
 
@@ -187,104 +189,16 @@ def plugin_app(parent: tk.Frame) -> tk.Frame | None:
     return fct.setup_main_ui(parent)
 
 
-def convert_iso_time_to_readable_string(departure_iso_time) -> str:
-    try:
-        # convert to datetime object from string
-        date_object_from_departure_time = datetime.strptime(departure_iso_time, "%Y-%m-%dT%H:%M:%SZ")
-        # convert to formated string
-        departure_time = date_object_from_departure_time.strftime("%Y-%m-%d, %H:%M")
-
-    except ValueError as exc:
-        raise ValueError('Bad datetime:', departure_iso_time) from exc
-        exit(1)
-
-    return departure_time
-
-
-def pack_data_carrier_jump_request(system_name: str, destination_body: str, departure_time: str, inara_url):
-    data = {
-        "content": "Fleet Carrier Tracker plugin (FCT) detected a carrier jump request:",
-        "embeds": [
-            {
-                "title": "Carrier jump scheduled to " + str(system_name),
-                "color": 2335683,
-                "fields": [
-                    {
-                        "name": "Destination system:",
-                        "value": system_name,
-                        "inline": True
-                    },
-                    {
-                        "name": "Destination body:",
-                        "value": destination_body,
-                        "inline": True
-                    },
-                    {
-                        "name": "Time of departure from the current system:",
-                        "value": departure_time
-                    },
-                    {
-                        "name": "Inara.cz Link for the carrier:",
-                        "value": fct.fct_carriers_inara_url.get()
-                    }
-                ]
-            }
-        ]
-    }
-    return data
-
-
-def data_for_canceled_jump_request():
-    data = {
-        "embeds": [
-            {
-                "title": "Jump request canceled",
-                "description": "Apologies, the scheduled jump is canceled.\nPlease ignore our previous notification about the jump, we are staying in the same system.",
-                "color": 13507612,
-                "fields": [
-                    {
-                        "name": "Inara.cz Link for the carrier:",
-                        "value": fct.fct_carriers_inara_url.get()
-                    }
-                ]
-            }
-        ]
-    }
-    return data
-
-
-def send_data_to_discord(content):
-    # Webhook
-    logger.info('---------------------- SENDING message to DISCORD ----------------------')
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-
-    r = requests.post(fct.fct_discord_webhook_url.get(), data=json.dumps(content), headers=headers, timeout=(1, 1))
-
-    if r.status_code == 204:
-        logger.info('Discord message sent successfully')
-
-    else:
-        logger.error('Discord message failed')
-
-    r.close()
-    logger.info('---------------------- End of communication with discord ----------------------')
-
-
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
     if entry['event'] == 'CarrierJumpRequest':
 
-        # process body if it exists
-        if 'Body' in entry:
+        # entry['Body'] is only exists when the destination body is the primary star or a pre-set planet
+        if 'Body' in entry.keys():
             destination_body = entry['Body']
         else:
-            destination_body = "unknown"
+            destination_body = None
 
-        destination_system_name = entry["SystemName"]
-        departure_time = convert_iso_time_to_readable_string(entry['DepartureTime'])
-
-        logger.info(f'fct jump Requested to: {destination_system_name} at: {departure_time}')
-
-        send_data_to_discord(pack_data_carrier_jump_request(destination_system_name, destination_body, departure_time, fct.fct_carriers_inara_url.get()))
+        fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body)
 
     if entry['event'] == 'CarrierJumpCancelled':
-        send_data_to_discord(data_for_canceled_jump_request())
+        fct.dm.jump_canceled()
