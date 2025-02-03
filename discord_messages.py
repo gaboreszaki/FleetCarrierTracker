@@ -101,14 +101,16 @@ class DiscordMessages:
     def convert_iso_time_to_readable_string(departure_iso_time: str) -> str:
         try:
             # convert to datetime object from string
-            date_object_from_departure_time = datetime.strptime(departure_iso_time, "%Y-%m-%dT%H:%M:%SZ")
-            # convert to formated string
-            departure_time = date_object_from_departure_time.strftime("%Y-%m-%d, %H:%M")
+            date_object_from_departure_time = datetime.strptime(departure_iso_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            # convert to epoch time
+            departure_time = int(date_object_from_departure_time.timestamp())
 
         except ValueError as exc:
             raise ValueError('Bad datetime:', departure_iso_time) from exc
 
-        return departure_time
+        return f"<t:{departure_time}:R>"
+
+
 
     def send_test_messages(self):
         logger.info(f'Sending TEST message to discord')
@@ -118,7 +120,7 @@ class DiscordMessages:
         destination_body = "Santy A"
         system_address = "7230678110938"
 
-        time_now = datetime.now()
+        time_now = datetime.now(timezone.utc)
         time_for_fake_departure = time_now + timedelta(minutes=16)
 
         departure_iso_time = f'{time_for_fake_departure:%Y-%m-%dT%H:%M:%SZ}'
