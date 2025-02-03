@@ -31,7 +31,7 @@ The plugin watches your journey file and send a discord text message via webhook
 - [ ] FCT Settings
   - [x] Discord webhook link
   - [x] Inara link
-    - [ ] optional link
+    - [x] optional link
   - [ ] Optional Dashboard display
 - [ ] EDMC dashboard
   - [ ] Current system with Inara link
