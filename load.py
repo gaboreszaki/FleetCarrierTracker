@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import tkinter as tk
+from tkinter import ttk
 import os
 from tkinter import Frame
 from typing import Optional
@@ -40,7 +41,7 @@ class FleetCarrierTracker:
 
         self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carriers_inara_url.get())
 
-        logger.info("Fleet carrier Tracker instantiated")
+        logger.info("FleetCarrierTracker  instantiated")
 
     def on_load(self) -> str:
         """
@@ -91,8 +92,16 @@ class FleetCarrierTracker:
         ).grid(row=current_row, columnspan=2, padx=PADX, pady=PADY, sticky=tk.W)
         current_row += 1
 
+        def test_discord_url(users_input):
+            test_dm = DiscordMessages(users_input)
+            test_dm.send_test_messages()
+
         nb.Label(frame, text='Discord Webhook URL:').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
-        nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url, show="*", width=30).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        discord_input = nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url, show="*", width=30)
+        discord_input.grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        test_btn = ttk.Button(frame, command=lambda: test_discord_url(discord_input.get()), text="Send TEST message")
+        test_btn.grid(row=current_row, column=2, padx=PADX, pady=BOXY, sticky=tk.EW)
+
         current_row += 1  # Always increment our row counter, makes for far easier tkinter design.
 
         nb.Label(frame, text='Inara Link for your carrier').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
@@ -128,13 +137,30 @@ class FleetCarrierTracker:
         current_row = 0
         frame = tk.Frame(parent)
 
-        if self.fct_discord_webhook_url.get() != None and self.fct_carriers_inara_url.get() != None:
-            fct_status = "enabled"
-        else:
-            fct_status = "need setup"
+        title = ttk.Label(frame, text="--- Fleet Carrier Tracker ---")
+        title.grid(row=current_row, columnspan=2)
 
-        tk.Label(frame, text="Fleet Carrier Tracker").grid(row=current_row, sticky=tk.W, pady=10)
-        tk.Label(frame, text=fct_status).grid(row=current_row, column=1, sticky=tk.W, padx=5)
+        current_row += 1
+
+        # title = tk.Label(frame, text='Fleet Carrier Tracker', font=("Arial", 10, "underline"))
+        # title.grid(columnspan=2, sticky=tk.E)
+        # title.grid(row=current_row, columnspan=1, sticky=tk.EW, pady=10 )
+        # title.columnconfigure(0, weight=1)
+        #
+        # current_row += 1
+        #
+        # carrier_id = config.get_str('fct_carrier_id')
+        # tk.Label(frame, text='Carrier ID:').grid(row=current_row,  )
+        # tk.Label(frame, text=carrier_id).grid(row=current_row, column=1,)
+        # current_row += 1
+
+        # if self.fct_discord_webhook_url.get() != None and self.fct_carriers_inara_url.get() != None:
+        #     fct_status = "enabled"
+        # else:
+        #     fct_status = "need setup"
+        #
+        # tk.Label(frame, text="Fleet Carrier Tracker").grid(row=current_row, sticky=tk.W, pady=10)
+        # tk.Label(frame, text=fct_status).grid(row=current_row, column=1, sticky=tk.W, padx=5)
 
         return frame
 
@@ -192,13 +218,19 @@ def plugin_app(parent: tk.Frame) -> tk.Frame | None:
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
     if entry['event'] == 'CarrierJumpRequest':
 
+        config.set('fct_carrier_id', str(entry['CarrierID']))
         # entry['Body'] is only exists when the destination body is the primary star or a pre-set planet
         if 'Body' in entry.keys():
             destination_body = entry['Body']
         else:
             destination_body = None
 
-        fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body)
+        fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body, entry['SystemAddress'])
 
     if entry['event'] == 'CarrierJumpCancelled':
         fct.dm.jump_canceled()
+
+    if entry['event'] == 'CarrierJump':
+        ...
+    if entry['event'] == 'CarrierStats':
+        ...
