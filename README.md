@@ -20,19 +20,23 @@ The plugin watches your journey file and send a discord text message via webhook
 [Inara](https://inara.cz/elite/news/) account *this will be optional later
 
 
-### Features: 
+### Features/todo: 
 
 - [ ] Discord notifications:
   - [x] Jump Request notification
   - [x] Jump Cancelled notification
-  - [x]  Link for your carrier
-  - [ ] Inara link for the system
+  - [x] Inara Link for your carrier (optional)
+  - [x] Inara link for the system
+  - [x] Markdown code field for easy copy to system and body
   - [ ] Calculated lockdown time
 - [ ] FCT Settings
-  - [x] Discord webhook link
-  - [x] Inara link
+  - [x] Discord webhook url input
+  - [x] Discord message tester
+  - [x] Inara url input
     - [x] optional link
   - [ ] Optional Dashboard display
+  - [ ] Discord url pattern verification
+  - [ ] inara url pattern verification
 - [ ] EDMC dashboard
   - [ ] Current system with Inara link
   - [ ] Carrier Name + link to Inara
@@ -45,13 +49,15 @@ The plugin watches your journey file and send a discord text message via webhook
 
 ### How to install it?
 
-1. Download the latest version from here: --- LINK will be available at v1.0 --- 
+1. Download the latest version from here: https://github.com/gaboreszaki/FleetCarrierTracker/releases
 2. Extract the folder to the EDMC's plugin folder
-3. Restart EDMC
+3. Restart EDMC if you had it open
 4. Open Settings 
 5. FleetCarrierTracker Tab
-6. Copy/Paste your Discord webhook and Inara links
-7. Press ok 
+6. Copy/Paste your Discord webhook and Inara links to the input fields
+   - Optionally you can test your Discord link with the **Send TEST message** button
+7. Press ok to save your settings
+
 
 
 ### Examples of the sent messages

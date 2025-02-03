@@ -41,7 +41,7 @@ class FleetCarrierTracker:
 
         self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carriers_inara_url.get())
 
-        logger.info("Fleet carrier Tracker instantiated")
+        logger.info("FleetCarrierTracker  instantiated")
 
     def on_load(self) -> str:
         """
@@ -92,16 +92,21 @@ class FleetCarrierTracker:
         ).grid(row=current_row, columnspan=2, padx=PADX, pady=PADY, sticky=tk.W)
         current_row += 1
 
+        def test_discord_url(users_input):
+            test_dm = DiscordMessages(users_input)
+            test_dm.send_test_messages()
+
         nb.Label(frame, text='Discord Webhook URL:').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
-        nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url, show="*", width=30).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        discord_input = nb.EntryMenu(frame, textvariable=self.fct_discord_webhook_url, show="*", width=30)
+        discord_input.grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        test_btn = ttk.Button(frame, command=lambda: test_discord_url(discord_input.get()), text="Send TEST message")
+        test_btn.grid(row=current_row, column=2, padx=PADX, pady=BOXY, sticky=tk.EW)
+
         current_row += 1  # Always increment our row counter, makes for far easier tkinter design.
 
         nb.Label(frame, text='Inara Link for your carrier').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
         nb.EntryMenu(frame, textvariable=self.fct_carriers_inara_url).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
         current_row += 1
-
-        test_btn = ttk.Button(frame, command=self.dm.send_test_messages(), text="Send TEST message to discord" )
-        test_btn.grid(row=current_row, columnspan=2, padx=PADX, pady=BOXY, sticky=tk.EW)
 
         return frame
 
@@ -220,7 +225,7 @@ def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry
         else:
             destination_body = None
 
-        fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body)
+        fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body, entry['SystemAddress'])
 
     if entry['event'] == 'CarrierJumpCancelled':
         fct.dm.jump_canceled()

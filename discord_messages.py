@@ -4,7 +4,7 @@ import json
 from time import sleep
 
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from config import appname, config
 
 # This **MUST** match the name of the folder the plugin is in.
@@ -19,7 +19,10 @@ class DiscordMessages:
         self.discord_webhook_url = discord_webhook_url
         self.carrier_inara_url = carrier_inara_url
 
-    def jump_request_message(self, destination_system_name: str, departure_iso_time: str, destination_body: str) -> None:
+        self.inara_search_url = "https://inara.cz/elite/starsystem/?search="
+        logger.info("DiscordMessages instantiated")
+
+    def jump_request_message(self, destination_system_name: str, departure_iso_time: str, destination_body: str, system_address: str) -> None:
 
         data = {
             "content": "Fleet Carrier Tracker plugin (FCT) detected a carrier jump request:",
@@ -36,7 +39,7 @@ class DiscordMessages:
         if destination_system_name is not None:
             data["embeds"][0]["fields"].append({
                 "name": "Destination system:",
-                "value": destination_system_name,
+                "value": f'```{destination_system_name}```',
                 "inline": True
             })
         else:
@@ -45,7 +48,7 @@ class DiscordMessages:
         if destination_body is not None:
             data["embeds"][0]["fields"].append({
                 "name": "Destination body:",
-                "value": destination_body,
+                "value": f'```{destination_body}```',
                 "inline": True
             })
 
@@ -59,6 +62,11 @@ class DiscordMessages:
             })
         else:
             logger.error('Missing Departure Time')
+
+        if system_address is not None:
+            destination_link = str(f'{self.inara_search_url}{system_address}')
+
+            data["embeds"][0]["description"] = f'[Detailed info about the system on inara.cz]({destination_link})'
 
         data = self.add_carrier_url(data)
 
@@ -103,27 +111,33 @@ class DiscordMessages:
         return departure_time
 
     def send_test_messages(self):
-        destination_system_name = "TEST - SYSTEM NAME"
-        departure_iso_time = "2025-01-01T12:00:00Z"
-        destination_body = "TEST - BODY"
+        logger.info(f'Sending TEST message to discord')
 
-        self.jump_request_message(destination_system_name, departure_iso_time, destination_body)
+        #"SystemName":"Santy", "Body":"Santy A", "SystemAddress":7230678110938,
+        destination_system_name = "Santy"
+        destination_body = "Santy A"
+        system_address = "7230678110938"
+
+        time_now = datetime.now()
+        time_for_fake_departure = time_now + timedelta(minutes=16)
+
+        departure_iso_time = f'{time_for_fake_departure:%Y-%m-%dT%H:%M:%SZ}'
+
+        self.jump_request_message(destination_system_name, departure_iso_time, destination_body, system_address)
         sleep(1)
         self.jump_canceled()
 
     def send(self, payload: dict) -> None:
         # Webhook
-        logger.info('---------------------- SENDING message to DISCORD ----------------------\n')
-        # logger.debug(f'sending data to: {self.discord_webhook_url}\n\n' )
-        # logger.debug(f'payload: {payload}' )
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
         r = requests.post(self.discord_webhook_url, data=json.dumps(payload), headers=headers, timeout=(1, 1))
 
+        logger.info('\n---------------------- SENDING message to DISCORD ----------------------')
         if r.status_code == 204:
             logger.info('Discord message sent successfully')
         else:
             logger.error('Discord message failed')
+        logger.info('---------------------- End of communication with discord ----------------------')
 
         r.close()
-        logger.info('---------------------- End of communication with discord ----------------------\n')
