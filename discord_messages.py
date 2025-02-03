@@ -1,6 +1,8 @@
 import logging
 import os
 import json
+from time import sleep
+
 import requests
 from datetime import datetime
 from config import appname, config
@@ -99,6 +101,15 @@ class DiscordMessages:
             raise ValueError('Bad datetime:', departure_iso_time) from exc
 
         return departure_time
+
+    def send_test_messages(self):
+        destination_system_name = "TEST - SYSTEM NAME"
+        departure_iso_time = "2025-01-01T12:00:00Z"
+        destination_body = "TEST - BODY"
+
+        self.jump_request_message(destination_system_name, departure_iso_time, destination_body)
+        sleep(1)
+        self.jump_canceled()
 
     def send(self, payload: dict) -> None:
         # Webhook

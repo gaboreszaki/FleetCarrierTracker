@@ -2,7 +2,7 @@
 
 ### What is this:
 A plugin for [EDMC](https://github.com/EDCD/EDMarketConnector) (Elite: Dangerous Market Connector) to notify a discord text-channel about upcoming Carrier jumps.
-The plugin watches your journey file and send a discord text message via webhook in the moment when the carrier's owner (you) setup or cancel a jump.
+The plugin watches your journey file and send a discord text message via webhook in realtime when the carrier's owner (you) setup or cancel a jump.
 
 ### Who is for:
 
