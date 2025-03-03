@@ -34,12 +34,25 @@ class FleetCarrierTracker:
     """
 
     def __init__(self) -> None:
-        # Be sure to use names that wont collide in our config variables
-        self.click_count = tk.StringVar(value=str(config.get_int('click_counter_count')))
-        self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
-        self.fct_carriers_inara_url = tk.StringVar(value=str(config.get_str('fct_carriers_inara_url')))
 
-        self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carriers_inara_url.get())
+        # Settings
+        self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
+        self.fct_carrier_inara_url = tk.StringVar(value=str(config.get_str('fct_carrier_inara_url')))
+
+
+        # Internal Variables
+        self.fct_carrier_last_known_location = tk.StringVar()
+        self.fct_is_jump_active = tk.BooleanVar(value=False)
+
+        self.ftc_jump_destination = tk.StringVar(value="No jump set")
+        self.fct_time_of_departure = tk.StringVar()
+
+        # calculated times in seconds
+        self.ftc_time_remains_till_jump = tk.IntVar()
+        self.ftc_time_remains_till_lockdown = tk.IntVar()
+
+        # Discord Messages instance
+        self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carrier_inara_url.get())
 
         logger.info("FleetCarrierTracker  instantiated")
 
@@ -51,6 +64,8 @@ class FleetCarrierTracker:
 
         :return: The name of the plugin, which will be used by EDMC for logging and for the settings window
         """
+
+        # todo: Determinate if we have a jump active and resume it if we have.
         return plugin_name
 
     def on_unload(self) -> None:
@@ -59,6 +74,9 @@ class FleetCarrierTracker:
 
         It is the last thing called before EDMC shuts down. Note that blocking code here will hold the shutdown process.
         """
+
+        # todo: turn of the threads if any running
+
         self.on_preferences_closed("", False)  # Save our prefs
 
     def setup_preferences(self, parent: nb.Notebook, cmdr: str, is_beta: bool) -> nb.Frame | None:
@@ -105,7 +123,7 @@ class FleetCarrierTracker:
         current_row += 1  # Always increment our row counter, makes for far easier tkinter design.
 
         nb.Label(frame, text='Inara Link for your carrier').grid(row=current_row, padx=PADX, pady=PADY, sticky=tk.W)
-        nb.EntryMenu(frame, textvariable=self.fct_carriers_inara_url).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
+        nb.EntryMenu(frame, textvariable=self.fct_carrier_inara_url).grid(row=current_row, column=1, padx=PADX, pady=BOXY, sticky=tk.EW)
         current_row += 1
 
         return frame
@@ -123,7 +141,7 @@ class FleetCarrierTracker:
         # `config.get_int()` will work for re-loading the value.
 
         config.set('fct_discord_webhook_url', str(self.fct_discord_webhook_url.get()))
-        config.set('fct_carriers_inara_url', str(self.fct_carriers_inara_url.get()))
+        config.set('fct_carrier_inara_url', str(self.fct_carrier_inara_url.get()))
 
     def setup_main_ui(self, parent: tk.Frame) -> tk.Frame:
         """
@@ -134,35 +152,57 @@ class FleetCarrierTracker:
         :param parent: EDMC main window Tk
         :return: Our frame
         """
+        PADX = 10  # noqa: N806
+        BUTTONX = 12  # noqa: N806
+        PADY = 1  # noqa: N806
+        BOXY = 2  # noqa: N806
+        SEPY = 10  # noqa: N806
+
+        frame = nb.Frame(parent)
+        frame.columnconfigure(1, weight=1)
         current_row = 0
-        frame = tk.Frame(parent)
 
-        title = ttk.Label(frame, text="--- Fleet Carrier Tracker ---")
-        title.grid(row=current_row, columnspan=2)
-
+        ttk.Label(frame, text="--- Fleet Carrier Tracker ---", anchor=tk.CENTER).grid(row=current_row, columnspan=2, sticky=tk.EW)
         current_row += 1
 
-        # title = tk.Label(frame, text='Fleet Carrier Tracker', font=("Arial", 10, "underline"))
-        # title.grid(columnspan=2, sticky=tk.E)
-        # title.grid(row=current_row, columnspan=1, sticky=tk.EW, pady=10 )
-        # title.columnconfigure(0, weight=1)
-        #
+        # # Carrier ID
+        # ttk.Label(frame, text="Carrier ID:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        # ttk.Label(frame, textvariable=self.fct_carrier_id).grid(row=current_row, column=1, sticky=tk.EW)
         # current_row += 1
         #
-        # carrier_id = config.get_str('fct_carrier_id')
-        # tk.Label(frame, text='Carrier ID:').grid(row=current_row,  )
-        # tk.Label(frame, text=carrier_id).grid(row=current_row, column=1,)
+        # # Carrier Name
+        # ttk.Label(frame, text="Carrier Name:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        # # ttk.Label(frame, textvariable=self.fct_carrier_name).grid(row=current_row, column=1, sticky=tk.EW)
+        # HyperlinkLabel(frame, text=str(self.fct_carrier_name.get()), url=str(self.fct_carrier_inara_url.get()), background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
+        # current_row += 1
+        #
+        # # Last known location
+        # inara_search_url = "https://inara.cz/elite/starsystem/?search="
+        # destination_link = str(f'{inara_search_url}{self.fct_jump_destination_id.get()}')
+        #
+        # ttk.Label(frame, text="Last known Location:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        # HyperlinkLabel(frame, textvariable=self.fct_jump_destination, url=destination_link, background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
+        # current_row += 1
+        #
+        # # ttk.Label(frame, text="Time of departure:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        # # ttk.Label(frame, textvariable=self.fct_departure_time_formated).grid(row=current_row, column=1, sticky=tk.EW)
+        # # current_row += 1
+        #
+        # ttk.Label(frame, text="Time until jump:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        # ttk.Label(frame, textvariable=self.fct_departure_remaining_time).grid(row=current_row, column=1, sticky=tk.EW)
         # current_row += 1
 
-        # if self.fct_discord_webhook_url.get() != None and self.fct_carriers_inara_url.get() != None:
-        #     fct_status = "enabled"
-        # else:
-        #     fct_status = "need setup"
-        #
-        # tk.Label(frame, text="Fleet Carrier Tracker").grid(row=current_row, sticky=tk.W, pady=10)
-        # tk.Label(frame, text=fct_status).grid(row=current_row, column=1, sticky=tk.W, padx=5)
 
         return frame
+
+
+    def calculate_time_diff(self):
+        ...
+
+    def calculate_is_jump_active(self):
+
+        departure_time = datetime.strptime(departure_iso_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
 
 
 fct = FleetCarrierTracker()
@@ -218,7 +258,15 @@ def plugin_app(parent: tk.Frame) -> tk.Frame | None:
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
     if entry['event'] == 'CarrierJumpRequest':
 
-        config.set('fct_carrier_id', str(entry['CarrierID']))
+        # # Assuming only the carriers owner can set a jump, we can safely store the carrier id for later usage
+        # carrier_id = entry['CarrierID']
+        # config.set('fct_carrier_id', str(carrier_id))
+        #
+        # # Store the jump params
+        # config.set('ftc_jump_destination', str(entry["SystemName"]))
+        # config.set('fct_time_of_departure', str(entry['DepartureTime']))
+
+
         # entry['Body'] is only exists when the destination body is the primary star or a pre-set planet
         if 'Body' in entry.keys():
             destination_body = entry['Body']
