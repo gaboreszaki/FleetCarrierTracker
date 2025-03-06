@@ -40,8 +40,8 @@ class FleetCarrierTracker:
     def __init__(self) -> None:
 
         # Development mode:
-        # self.fct_is_dev_mode = True
-        # self.fct_dev_webhook_url = "https://discord.com/api/webhooks/1335559907910488167/1hYslXMgBnAk4AqFda-0X0kqP74naXQP5mVur3Fjtsbe_sVI0MND4eWjZkWW7A0VTz8-"
+        self.fct_is_dev_mode = True
+        self.fct_dev_webhook_url = config.get_str('fct_dev_webhook_url')
 
         # Settings
         self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
@@ -56,12 +56,12 @@ class FleetCarrierTracker:
         self.fct_time_of_departure = tk.StringVar(value=str(config.get_str('fct_time_of_departure')))
 
         ### DM Instance
-        if not self.fct_is_dev_mode:
+        if self.fct_is_dev_mode and self.fct_dev_webhook_url:
+            self.dm = DiscordMessages(self.fct_dev_webhook_url, self.fct_carrier_inara_url.get())
+            logger.info("Fleet Carrier Tracker - initiated in development mode")
+        else:
             self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carrier_inara_url.get())
             logger.info("Fleet Carrier Tracker - initiated")
-        else:
-            self.dm = DiscordMessages(self.fct_dev_webhook_url, self.fct_carrier_inara_url.get())
-            logger.info("Fleet Carrier Tracker - initiated in development mode ")
 
         # Chronos instance
         self.ui_frame = None

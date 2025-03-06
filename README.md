@@ -22,13 +22,13 @@ The plugin watches your journey file and send a discord text message via webhook
 
 ### Features/todo: 
 
-- [ ] Discord notifications:
+- [x] Discord notifications:
   - [x] Jump Request notification
   - [x] Jump Cancelled notification
   - [x] Inara Link for your carrier (optional)
   - [x] Inara link for the system
   - [x] Markdown code field for easy copy to system and body
-  - [ ] Calculated lockdown time
+  - [x] Calculated lockdown time
 - [ ] FCT Settings
   - [x] Discord webhook url input
   - [x] Discord message tester
@@ -40,9 +40,9 @@ The plugin watches your journey file and send a discord text message via webhook
 - [ ] EDMC dashboard
   - [ ] Current system with Inara link
   - [ ] Carrier Name + link to Inara
-  - [ ] Track time/countdown
-    - [ ] Time until Lockdown time
-    - [ ] Time until jump
+  - [x] Track time/countdown
+    - [x] Time until Lockdown time
+    - [x] Time until jump
     - [ ] Time left to cancel the jump
 
 
@@ -60,6 +60,11 @@ The plugin watches your journey file and send a discord text message via webhook
 
 
 
+### Development mode:
+To not use a live notification chanel but use a development channel, set the `fct_is_dev_mode` variable to `TRUE`
+and add a new registry entry to `Computer\HKEY_CURRENT_USER\SOFTWARE\Marginal\EDMarketConnector` with the name `fct_dev_webhook_url`
+add your desired webhook url as a value, then start/restart EDMC to load new parameters. 
+
 ### Examples of the sent messages
 ![Jump request message example](./assets/jump_request_message_example.png)
 ![Jump Cancel message example](./assets/jump_cancel_message_example.png)
@@ -74,6 +79,7 @@ The plugin watches your journey file and send a discord text message via webhook
 > What is and how to create a Discord webhook:
 > 
 > https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+> 
 
 
 
