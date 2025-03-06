@@ -5,7 +5,9 @@ It adds a single button to the EDMC interface that displays the number of times 
 """
 from __future__ import annotations
 
+import datetime
 import logging
+import time
 import tkinter as tk
 from tkinter import ttk
 import os
@@ -15,6 +17,8 @@ from typing import Optional
 import myNotebook as nb  # noqa: N813
 
 from discord_messages import DiscordMessages
+import threading
+from chronos import Chronos
 
 from ttkHyperlinkLabel import HyperlinkLabel
 from config import appname, config
@@ -35,26 +39,45 @@ class FleetCarrierTracker:
 
     def __init__(self) -> None:
 
+        # Development mode:
+        # self.fct_is_dev_mode = True
+        # self.fct_dev_webhook_url = "https://discord.com/api/webhooks/1335559907910488167/1hYslXMgBnAk4AqFda-0X0kqP74naXQP5mVur3Fjtsbe_sVI0MND4eWjZkWW7A0VTz8-"
+
         # Settings
         self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
         self.fct_carrier_inara_url = tk.StringVar(value=str(config.get_str('fct_carrier_inara_url')))
 
-
         # Internal Variables
         self.fct_carrier_last_known_location = tk.StringVar()
-        self.fct_is_jump_active = tk.BooleanVar(value=False)
+        self.fct_is_jump_active = tk.BooleanVar(value=bool(config.get_bool('fct_is_jump_active')))
 
-        self.ftc_jump_destination = tk.StringVar(value="No jump set")
-        self.fct_time_of_departure = tk.StringVar()
+        self.fct_jump_destination = tk.StringVar(value=str(config.get_str('fct_jump_destination')))
+        self.fct_jump_destination_id = tk.StringVar(value=str(config.get_str('fct_jump_destination_id')))
+        self.fct_time_of_departure = tk.StringVar(value=str(config.get_str('fct_time_of_departure')))
 
-        # calculated times in seconds
-        self.ftc_time_remains_till_jump = tk.IntVar()
-        self.ftc_time_remains_till_lockdown = tk.IntVar()
+        ### DM Instance
+        if not self.fct_is_dev_mode:
+            self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carrier_inara_url.get())
+            logger.info("Fleet Carrier Tracker - initiated")
+        else:
+            self.dm = DiscordMessages(self.fct_dev_webhook_url, self.fct_carrier_inara_url.get())
+            logger.info("Fleet Carrier Tracker - initiated in development mode ")
 
-        # Discord Messages instance
-        self.dm = DiscordMessages(self.fct_discord_webhook_url.get(), self.fct_carrier_inara_url.get())
+        # Chronos instance
+        self.ui_frame = None
+        self.chronos = Chronos()
 
-        logger.info("FleetCarrierTracker  instantiated")
+        # Tkinter variables for time tracking
+        self.formated_remaining_time_for_departure = tk.StringVar(value="00:00:00")
+        # self.seconds_remaining_for_departure = tk.IntVar(value=0)
+        self.formated_remaining_time_for_lockdown = tk.StringVar(value="00:00:00")
+        # self.seconds_remaining_for_lockdown = tk.IntVar(value=0)
+
+        # Start Chronos without blocking
+        if self.fct_is_jump_active.get():
+            self.chronos.start(self.fct_time_of_departure.get())
+        else:
+            self.chronos.stop()
 
     def on_load(self) -> str:
         """
@@ -65,7 +88,6 @@ class FleetCarrierTracker:
         :return: The name of the plugin, which will be used by EDMC for logging and for the settings window
         """
 
-        # todo: Determinate if we have a jump active and resume it if we have.
         return plugin_name
 
     def on_unload(self) -> None:
@@ -76,7 +98,7 @@ class FleetCarrierTracker:
         """
 
         # todo: turn of the threads if any running
-
+        self.chronos.stop()
         self.on_preferences_closed("", False)  # Save our prefs
 
     def setup_preferences(self, parent: nb.Notebook, cmdr: str, is_beta: bool) -> nb.Frame | None:
@@ -184,25 +206,61 @@ class FleetCarrierTracker:
         # HyperlinkLabel(frame, textvariable=self.fct_jump_destination, url=destination_link, background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
         # current_row += 1
         #
-        # # ttk.Label(frame, text="Time of departure:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        # # ttk.Label(frame, textvariable=self.fct_departure_time_formated).grid(row=current_row, column=1, sticky=tk.EW)
-        # # current_row += 1
-        #
-        # ttk.Label(frame, text="Time until jump:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        # ttk.Label(frame, textvariable=self.fct_departure_remaining_time).grid(row=current_row, column=1, sticky=tk.EW)
-        # current_row += 1
+        ttk.Label(frame, text="Time of departure:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.fct_time_of_departure).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
 
+        ### Displays:
+        # is jump active
+        ttk.Label(frame, text="is jump active:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.fct_is_jump_active).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
 
+        # time remaining until lockdown
+        ttk.Label(frame, text="Time until lockdown:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.formated_remaining_time_for_lockdown).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # time remaining until jump
+        ttk.Label(frame, text="Time until jump:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.formated_remaining_time_for_departure).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # Start the time tracker
+        self.ui_frame = frame  # Store reference AFTER creating frame
         return frame
 
+    def update_config(self):
+        # Update config
+        try:
+            if self.fct_jump_destination.get():
+                config.set('fct_jump_destination', str(self.fct_jump_destination.get()))
+            if self.fct_jump_destination_id.get():
+                config.set('fct_jump_destination_id', str(self.fct_jump_destination_id.get()))
+            if self.fct_time_of_departure.get():
+                config.set('fct_time_of_departure', str(self.fct_time_of_departure.get()))
 
-    def calculate_time_diff(self):
-        ...
+            config.set('fct_is_jump_active', self.fct_is_jump_active.get())
 
-    def calculate_is_jump_active(self):
+        except Exception as e:
+            logger.error(f"Failed to update configuration: {e}")
 
-        departure_time = datetime.strptime(departure_iso_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    def start_tracking_time(self):
 
+        logger.info(self.chronos.formated_remaining_time_for_departure)
+        logger.info(self.chronos.formated_remaining_time_for_lockdown)
+
+        self.formated_remaining_time_for_departure.set(self.chronos.formated_remaining_time_for_departure)
+        # self.seconds_remaining_for_departure.set(self.chronos.seconds_remaining_for_departure)
+        self.formated_remaining_time_for_lockdown.set(self.chronos.formated_remaining_time_for_lockdown)
+        # self.seconds_remaining_for_lockdown.set(self.chronos.seconds_remaining_for_lockdown)
+
+        if self.fct_is_jump_active.get():
+            # Schedule the next update in 1 second
+            self.ui_frame.after(1000, self.start_tracking_time)
+        else:
+            logger.info("chronos stopped")
+            self.chronos.stop()
 
 
 fct = FleetCarrierTracker()
@@ -252,7 +310,9 @@ def plugin_app(parent: tk.Frame) -> tk.Frame | None:
 
     See PLUGINS.md#display
     """
-    return fct.setup_main_ui(parent)
+    frame = fct.setup_main_ui(parent)
+    fct.start_tracking_time()
+    return frame
 
 
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
@@ -262,10 +322,23 @@ def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry
         # carrier_id = entry['CarrierID']
         # config.set('fct_carrier_id', str(carrier_id))
         #
-        # # Store the jump params
-        # config.set('ftc_jump_destination', str(entry["SystemName"]))
-        # config.set('fct_time_of_departure', str(entry['DepartureTime']))
+        # Store the jump params
+        fct.fct_jump_destination.set(str(entry["SystemName"]))
+        fct.fct_jump_destination_id.set(str(entry['SystemAddress']))
+        fct.fct_time_of_departure.set(str(entry['DepartureTime']))
 
+        fct.fct_is_jump_active.set(bool(True))
+
+        # store in config for long term
+        fct.update_config()
+
+        # Ensure existing timers are stopped before starting a new one
+        fct.chronos.stop()
+
+        # start timer
+        logger.info(str(entry['DepartureTime']))
+        fct.chronos.start(str(entry['DepartureTime']))
+        fct.start_tracking_time()
 
         # entry['Body'] is only exists when the destination body is the primary star or a pre-set planet
         if 'Body' in entry.keys():
@@ -273,9 +346,13 @@ def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry
         else:
             destination_body = None
 
+        # Send Discord Message
         fct.dm.jump_request_message(entry["SystemName"], entry['DepartureTime'], destination_body, entry['SystemAddress'])
 
     if entry['event'] == 'CarrierJumpCancelled':
+        fct.fct_is_jump_active.set(bool(False))
+        fct.chronos.stop()
+        fct.update_config()
         fct.dm.jump_canceled()
 
     if entry['event'] == 'CarrierJump':

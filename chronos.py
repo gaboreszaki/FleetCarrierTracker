@@ -1,8 +1,6 @@
-
 from threading import Thread
 from time import sleep
 from datetime import datetime, timezone, timedelta
-
 
 import tkinter as tk
 
@@ -11,8 +9,7 @@ class Chronos:
     def __init__(self):
 
         # Convert timestamp once instead of repeatedly parsing it
-        self.departure_timestamp = "2025-01-01T12:00:10Z"
-        self.departure_time = datetime.strptime(self.departure_timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        self.departure_time = None
         self.countdown_departure = True
         self.countdown_lockdown = True
 
@@ -28,7 +25,6 @@ class Chronos:
         self.seconds_remaining_for_departure = int(0)
         self.formated_remaining_time_for_lockdown = str("00:00:00")
         self.seconds_remaining_for_lockdown = int(0)
-
 
     @staticmethod
     def time_diff(timestamp):
@@ -53,8 +49,13 @@ class Chronos:
 
     def time_till_departure(self):
         while self.countdown_departure:
+            if self.departure_time is None:
+                sleep(1)  # Prevents a busy loop
+                continue
+
             time_diff_for_departure = self.time_diff(self.departure_time)
             diff_in_seconds = time_diff_for_departure.total_seconds()
+
             if diff_in_seconds <= 0:
                 if self.debug_mode:
                     print('Departure time reached!\n')
@@ -62,15 +63,23 @@ class Chronos:
                 break
 
             readable_time = self.convert_to_readable_time(int(diff_in_seconds))
+
             self.formated_remaining_time_for_departure = str(readable_time)
             self.seconds_remaining_for_departure = int(diff_in_seconds)
+
             if self.debug_mode:
                 print(f"Jump in: {readable_time}")
+
             sleep(1)
 
     def time_till_lockdown(self):
         lockdown_time = self.departure_time - timedelta(minutes=3, seconds=20)
         while self.countdown_lockdown:
+
+            if self.departure_time is None:
+                sleep(1)  # Prevents a busy loop
+                continue
+
             time_diff_for_lockdown = self.time_diff(lockdown_time)
             diff_in_seconds = time_diff_for_lockdown.total_seconds()
             if diff_in_seconds <= 0:
@@ -87,26 +96,46 @@ class Chronos:
             sleep(1)
 
     def start(self, timestamp):
-        self.departure_timestamp = timestamp
+
+        # Ensure previous threads are stopped
+        self.stop()
+
+        # Get departure time object
+        self.departure_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+        # Reset countdown flags
+        self.countdown_departure = True
+        self.countdown_lockdown = True
+
+        # Create then start new threads
+        self.departure_thread = Thread(target=self.time_till_departure, daemon=True)
+        self.lockdown_thread = Thread(target=self.time_till_lockdown, daemon=True)
+
         self.departure_thread.start()
         self.lockdown_thread.start()
 
+        if self.debug_mode:
+            print(f"Countdown started for departure at {timestamp}")
+
     def stop(self):
-        """Stops both countdowns and waits for threads to finish."""
+        """
+        Stops both countdowns and waits for threads to finish.
+        """
         self.countdown_departure = False
         self.countdown_lockdown = False
-        if self.departure_thread.is_alive():
+
+        # Ensure threads exist before joining
+        if hasattr(self, "departure_thread") and self.departure_thread.is_alive():
             self.departure_thread.join()
             if self.debug_mode:
                 print("departure_thread killed")
-        if self.lockdown_thread.is_alive():
+
+        if hasattr(self, "lockdown_thread") and self.lockdown_thread.is_alive():
             self.lockdown_thread.join()
             if self.debug_mode:
                 print("lockdown_thread killed")
 
         self.reset_data_storage()
-
-
         if self.debug_mode:
             print("Countdown stopped.")
 
@@ -114,7 +143,7 @@ class Chronos:
 if __name__ == "__main__":
     chronos = Chronos()
     chronos.debug_mode = False
-    chronos.start()
+    chronos.start("2025-03-05T19:00:10Z")
 
     try:
         while chronos.countdown_departure or chronos.countdown_lockdown:
