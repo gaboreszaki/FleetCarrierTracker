@@ -40,20 +40,27 @@ class FleetCarrierTracker:
     def __init__(self) -> None:
 
         # Development mode:
-        self.fct_is_dev_mode = True
+        self.fct_is_dev_mode = False
         self.fct_dev_webhook_url = config.get_str('fct_dev_webhook_url')
 
         # Settings
         self.fct_discord_webhook_url = tk.StringVar(value=str(config.get_str('fct_discord_webhook_url')))
         self.fct_carrier_inara_url = tk.StringVar(value=str(config.get_str('fct_carrier_inara_url')))
 
-        # Internal Variables
-        self.fct_carrier_last_known_location = tk.StringVar()
+        # Carrier info
+        self.fct_carrier_id = tk.StringVar(value=str(config.get_str('fct_carrier_id')))
+        self.fct_carrier_name = tk.StringVar(value=str(config.get_str('fct_carrier_name')))
+
+        # Jump Variables
         self.fct_is_jump_active = tk.BooleanVar(value=bool(config.get_bool('fct_is_jump_active')))
+        self.fct_is_jump_active_string = tk.StringVar(value=str(self.fct_is_jump_active.get()))
+        self.fct_time_of_departure = tk.StringVar(value=str(config.get_str('fct_time_of_departure')))
+
+        self.fct_carrier_last_known_location = tk.StringVar(value=str(config.get_str('fct_carrier_last_known_location')))
+        self.fct_carrier_last_known_location_id = tk.StringVar(value=str(config.get_str('fct_carrier_last_known_location_id')))
 
         self.fct_jump_destination = tk.StringVar(value=str(config.get_str('fct_jump_destination')))
         self.fct_jump_destination_id = tk.StringVar(value=str(config.get_str('fct_jump_destination_id')))
-        self.fct_time_of_departure = tk.StringVar(value=str(config.get_str('fct_time_of_departure')))
 
         ### DM Instance
         if self.fct_is_dev_mode and self.fct_dev_webhook_url:
@@ -69,12 +76,10 @@ class FleetCarrierTracker:
 
         # Tkinter variables for time tracking
         self.formated_remaining_time_for_departure = tk.StringVar(value="00:00:00")
-        # self.seconds_remaining_for_departure = tk.IntVar(value=0)
         self.formated_remaining_time_for_lockdown = tk.StringVar(value="00:00:00")
-        # self.seconds_remaining_for_lockdown = tk.IntVar(value=0)
 
-        # Start Chronos without blocking
-        if self.fct_is_jump_active.get():
+        # Start Chronos if the jump is active and the departure time is not empty
+        if self.fct_is_jump_active.get() and not self.fct_time_of_departure.get() == "-":
             self.chronos.start(self.fct_time_of_departure.get())
         else:
             self.chronos.stop()
@@ -187,35 +192,46 @@ class FleetCarrierTracker:
         ttk.Label(frame, text="--- Fleet Carrier Tracker ---", anchor=tk.CENTER).grid(row=current_row, columnspan=2, sticky=tk.EW)
         current_row += 1
 
-        # # Carrier ID
-        # ttk.Label(frame, text="Carrier ID:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        # ttk.Label(frame, textvariable=self.fct_carrier_id).grid(row=current_row, column=1, sticky=tk.EW)
-        # current_row += 1
-        #
-        # # Carrier Name
-        # ttk.Label(frame, text="Carrier Name:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        # # ttk.Label(frame, textvariable=self.fct_carrier_name).grid(row=current_row, column=1, sticky=tk.EW)
-        # HyperlinkLabel(frame, text=str(self.fct_carrier_name.get()), url=str(self.fct_carrier_inara_url.get()), background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
-        # current_row += 1
-        #
-        # # Last known location
-        # inara_search_url = "https://inara.cz/elite/starsystem/?search="
-        # destination_link = str(f'{inara_search_url}{self.fct_jump_destination_id.get()}')
-        #
-        # ttk.Label(frame, text="Last known Location:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        # HyperlinkLabel(frame, textvariable=self.fct_jump_destination, url=destination_link, background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
-        # current_row += 1
-        #
+        # Carrier ID
+        ttk.Label(frame, text="Carrier ID:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.fct_carrier_id).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # Carrier Name
+        ttk.Label(frame, text="Carrier Name:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        HyperlinkLabel(frame, textvariable=self.fct_carrier_name, url=str(self.fct_carrier_inara_url.get()), background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # Last Known location
+        inara_search_url = "https://inara.cz/elite/starsystem/?search="
+        destination_link = str(f'{inara_search_url}{self.fct_carrier_last_known_location_id.get()}')
+
+        ttk.Label(frame, text="Last known Location:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        HyperlinkLabel(frame, textvariable=self.fct_carrier_last_known_location, url=destination_link, background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        ttk.Label(frame, text="--- Jump parameters ---", anchor=tk.CENTER).grid(row=current_row, columnspan=2, sticky=tk.EW)
+        current_row += 1
+
+        # is jump active
+        ttk.Label(frame, text="Jump active:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        ttk.Label(frame, textvariable=self.fct_is_jump_active_string).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # Destination
+        inara_search_url = "https://inara.cz/elite/starsystem/?search="
+        destination_link = str(f'{inara_search_url}{self.fct_jump_destination_id.get()}')
+
+        ttk.Label(frame, text="Jump destination:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
+        HyperlinkLabel(frame, textvariable=self.fct_jump_destination, url=destination_link, background=nb.Label().cget('background'), underline=False).grid(row=current_row, column=1, sticky=tk.EW)
+        current_row += 1
+
+        # Time of departure
         ttk.Label(frame, text="Time of departure:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
         ttk.Label(frame, textvariable=self.fct_time_of_departure).grid(row=current_row, column=1, sticky=tk.EW)
         current_row += 1
 
-        ### Displays:
-        # is jump active
-        ttk.Label(frame, text="is jump active:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
-        ttk.Label(frame, textvariable=self.fct_is_jump_active).grid(row=current_row, column=1, sticky=tk.EW)
-        current_row += 1
-
+        ### Time Displays:
         # time remaining until lockdown
         ttk.Label(frame, text="Time until lockdown:", anchor=tk.W).grid(row=current_row, column=0, sticky=tk.EW)
         ttk.Label(frame, textvariable=self.formated_remaining_time_for_lockdown).grid(row=current_row, column=1, sticky=tk.EW)
@@ -233,12 +249,24 @@ class FleetCarrierTracker:
     def update_config(self):
         # Update config
         try:
+
+            if self.fct_carrier_last_known_location.get():
+                config.set('fct_carrier_last_known_location', str(self.fct_carrier_last_known_location.get()))
+            if self.fct_carrier_last_known_location_id.get():
+                config.set('fct_carrier_last_known_location_id', str(self.fct_carrier_last_known_location_id.get()))
+
             if self.fct_jump_destination.get():
                 config.set('fct_jump_destination', str(self.fct_jump_destination.get()))
             if self.fct_jump_destination_id.get():
                 config.set('fct_jump_destination_id', str(self.fct_jump_destination_id.get()))
+
             if self.fct_time_of_departure.get():
                 config.set('fct_time_of_departure', str(self.fct_time_of_departure.get()))
+
+            if self.fct_carrier_id.get():
+                config.set('fct_carrier_id', str(self.fct_carrier_id.get()))
+            if self.fct_carrier_name.get():
+                config.set('fct_carrier_name', str(self.fct_carrier_name.get()))
 
             config.set('fct_is_jump_active', self.fct_is_jump_active.get())
 
@@ -247,27 +275,37 @@ class FleetCarrierTracker:
 
     def start_tracking_time(self):
 
-        logger.info(self.chronos.formated_remaining_time_for_departure)
-        logger.info(self.chronos.formated_remaining_time_for_lockdown)
-
         self.formated_remaining_time_for_departure.set(self.chronos.formated_remaining_time_for_departure)
-        # self.seconds_remaining_for_departure.set(self.chronos.seconds_remaining_for_departure)
         self.formated_remaining_time_for_lockdown.set(self.chronos.formated_remaining_time_for_lockdown)
-        # self.seconds_remaining_for_lockdown.set(self.chronos.seconds_remaining_for_lockdown)
 
-        if self.fct_is_jump_active.get():
+
+
+
+
+
+        if self.fct_is_jump_active.get() and self.chronos.seconds_remaining_for_departure > 0:
             # Schedule the next update in 1 second
             self.ui_frame.after(1000, self.start_tracking_time)
+
         else:
+
+            self.fct_carrier_last_known_location.set(self.fct_jump_destination.get())
+            self.fct_carrier_last_known_location_id.set(self.fct_jump_destination_id.get())
+            self.reset_jump_params()
             logger.info("chronos stopped")
             self.chronos.stop()
+
+    def reset_jump_params(self):
+        self.fct_jump_destination.set("-")
+        self.fct_jump_destination_id.set("-")
+        self.fct_time_of_departure.set("-")
+
+        self.update_config()
 
 
 fct = FleetCarrierTracker()
 
 
-# Note that all of these could be simply replaced with something like:
-# plugin_start3 = cc.on_load
 def plugin_start3(plugin_dir: str) -> str:
     """
     Handle start up of the plugin.
@@ -318,10 +356,9 @@ def plugin_app(parent: tk.Frame) -> tk.Frame | None:
 def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry: dict, state: dict) -> None:
     if entry['event'] == 'CarrierJumpRequest':
 
-        # # Assuming only the carriers owner can set a jump, we can safely store the carrier id for later usage
-        # carrier_id = entry['CarrierID']
-        # config.set('fct_carrier_id', str(carrier_id))
-        #
+        # Assuming only the carriers owner can set a jump, we can safely store the carrier id for later usage
+        fct.fct_carrier_id.set(str(entry['CarrierID']))
+
         # Store the jump params
         fct.fct_jump_destination.set(str(entry["SystemName"]))
         fct.fct_jump_destination_id.set(str(entry['SystemAddress']))
@@ -358,4 +395,6 @@ def journal_entry(cmdrname: str, is_beta: bool, system: str, station: str, entry
     if entry['event'] == 'CarrierJump':
         ...
     if entry['event'] == 'CarrierStats':
-        ...
+        if str(entry['CarrierID']) == fct.fct_carrier_id.get():
+            fct.fct_carrier_name.set(entry['Name'])
+            fct.update_config()
